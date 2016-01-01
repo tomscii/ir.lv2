@@ -29,10 +29,7 @@
 #include <samplerate.h>
 #include <zita-convolver.h>
 
-//#include "uri-map.h"
-
 #define IR_URI                    "http://factorial.hu/plugins/lv2/ir"
-#define IR_PERSIST_KEY_FILENAME   "http://factorial.hu/plugins/lv2/ir/keys/ir_filename"
 
 #define BSIZE       0x4000      /* Blocksize for soundfile data access */
 #define BSIZE_SR    0x1000      /* Blocksize for SRC */

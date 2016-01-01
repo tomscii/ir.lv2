@@ -33,6 +33,23 @@
 #include "ir.h"
 #include "ir_utils.h"
 
+#if ZITA_CONVOLVER_MAJOR_VERSION != 3
+#error "This version of IR requires zita-convolver 3.x.x"
+#endif
+ 
+/* You may need to change these to match your JACK server setup!
+ *
+ * Priority should match -P parameter passed to jackd.
+ * Sched.class: either SCHED_FIFO or SCHED_RR (I think Jack uses SCHED_FIFO).
+ *
+ * THREAD_SYNC_MODE must be true if you want to use the plugin in Jack
+ * freewheeling mode (eg. while exporting in Ardour). You may only use
+ * false if you *only* run the plugin realtime.
+ */
+#define CONVPROC_SCHEDULER_PRIORITY 0
+#define CONVPROC_SCHEDULER_CLASS SCHED_FIFO
+#define THREAD_SYNC_MODE true
+
 
 static LV2_Descriptor * IR_Descriptor = NULL;
 static GKeyFile * keyfile = NULL;
@@ -144,8 +161,6 @@ void free_ir_samples(IR * ir) {
 
 void free_conv_safely(Convproc * conv) {
 	unsigned int state;
-	struct timespec treq;
-	struct timespec trem;
 
 	if (!conv) {
 		return;
@@ -154,15 +169,7 @@ void free_conv_safely(Convproc * conv) {
 	if (state != Convproc::ST_STOP) {
 		conv->stop_process();
 	}
-	while (state != Convproc::ST_STOP) {
-		/* sleep 10 ms before checking again */
-		treq.tv_sec = 0;
-		treq.tv_nsec = 10000000;
-		nanosleep(&treq, &trem);
-
-		conv->check();
-		state = conv->state();
-	}
+	conv->cleanup();
 	delete conv;	
 }
 
@@ -211,7 +218,7 @@ static int load_sndfile(IR * ir) {
 	float * buff;
 
 	if (!(ir->source_path) || *ir->source_path != '/') {
-		fprintf(stderr, "IR: read_sndfile error: %s is not an absolute path\n",
+		fprintf(stderr, "IR: load_sndfile error: %s is not an absolute path\n",
 			ir->source_path);
 		return -1;
 	}
@@ -505,6 +512,9 @@ void init_conv(IR * ir) {
 	}
 
 	G_LOCK(conv_configure_lock);
+	if (ir->nchan == 4) {
+		conv->set_density(1);
+	}
 	//printf("configure length=%d ir->block_length=%d\n", length, ir->block_length);
 	int ret = conv->configure(2, // n_inputs
 				  2, // n_outputs
@@ -552,7 +562,7 @@ void init_conv(IR * ir) {
 			ir->nchan);
 	}
 
-	conv->start_process(0);
+	conv->start_process(CONVPROC_SCHEDULER_PRIORITY, CONVPROC_SCHEDULER_CLASS);
 	ir->conv_req_to_use = req_to_use;
 }
 
@@ -714,7 +724,7 @@ static void runIR(LV2_Handle instance, uint32_t sample_count) {
 			q[j] = in_R[j] + x * in_L[j];
 		}
 		
-		conv->process();		
+		conv->process(THREAD_SYNC_MODE);
 
 		p = conv->outdata(0);
 		q = conv->outdata(1);
@@ -759,6 +769,12 @@ const void * extdata_IR(const char * uri) {
 }
 
 void __attribute__ ((constructor)) init() {
+
+	if (zita_convolver_major_version () != ZITA_CONVOLVER_MAJOR_VERSION) {
+		fprintf(stderr, "IR: compile-time & runtime library versions of zita-convolver do not match!\n");
+		IR_Descriptor = NULL;
+		return;
+	}
 
 	g_type_init();
 	if (!g_thread_supported()) {
