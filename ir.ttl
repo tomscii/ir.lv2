@@ -1,0 +1,256 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix lv2:  <http://lv2plug.in/ns/lv2core#>.
+@prefix doap: <http://usefulinc.com/ns/doap#>.
+@prefix llext: <http://ll-plugins.nongnu.org/lv2/ext/>.
+@prefix foaf: <http://xmlns.com/foaf/0.1/>.
+@prefix ue: <http://lv2plug.in/ns/extensions/units#>.
+@prefix epp: <http://lv2plug.in/ns/dev/extportinfo#>.
+@prefix uiext: <http://lv2plug.in/ns/extensions/ui#>.
+
+
+<http://factorial.hu/plugins/lv2/ir/gui>
+    a uiext:GtkUI;
+    uiext:binary <ir_gui.so>;
+    lv2:requiredFeature <http://lv2plug.in/ns/ext/instance-access>;
+    lv2:requiredFeature uiext:makeResident.
+
+<http://factorial.hu/plugins/lv2/ir>
+    a lv2:Plugin;
+    a lv2:ReverbPlugin;
+    doap:name "IR";
+    doap:license <http://usefulinc.com/doap/licenses/gpl>;
+    doap:maintainer [
+      foaf:name "Tom Szilagyi";
+      foaf:homepage <http://factorial.hu/>;
+      foaf:mbox <mailto:tomszilagyi@gmail.com>;
+    ];
+
+    uiext:ui <http://factorial.hu/plugins/lv2/ir/gui>;
+
+########## Audio I/O ports ##########
+
+    lv2:port [
+      a lv2:InputPort, lv2:AudioPort;
+      lv2:datatype lv2:float;
+      lv2:index 0;
+      lv2:symbol "in_L";
+      lv2:name "Left audio input";
+    ] , [
+      a lv2:InputPort, lv2:AudioPort;
+      lv2:datatype lv2:float;
+      lv2:index 1;
+      lv2:symbol "in_R";
+      lv2:name "Right audio input";
+    ] , [
+      a lv2:OutputPort, lv2:AudioPort;
+      lv2:datatype lv2:float;
+      lv2:index 2;
+      lv2:symbol "out_L";
+      lv2:name "Left audio output";
+    ] , [
+      a lv2:OutputPort, lv2:AudioPort;
+      lv2:datatype lv2:float;
+      lv2:index 3;
+      lv2:symbol "out_R";
+      lv2:name "Right audio output";
+    ] ,
+
+########## Control ports ##########
+
+    [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 4 ;
+      lv2:symbol "port_reverse" ;
+      lv2:name "Reverse IR" ;
+      lv2:default 0.0 ;
+      lv2:minimum 0.0 ;
+      lv2:maximum 1.0 ;
+      lv2:portProperty epp:hasStrictBounds;
+      lv2:portProperty lv2:toggled;
+    ] , [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 5 ;
+      lv2:symbol "port_predelay" ;
+      lv2:name "Predelay" ;
+      lv2:default 0.0 ;
+      lv2:minimum 0.0 ;
+      lv2:maximum 2000.0 ;
+      lv2:portProperty epp:hasStrictBounds;
+      ue:unit ue:ms;
+    ] , [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 6 ;
+      lv2:symbol "port_attack" ;
+      lv2:name "Attack" ;
+      lv2:default 100.0 ;
+      lv2:minimum 0.0 ;
+      lv2:maximum 100.0 ;
+      lv2:portProperty epp:hasStrictBounds;
+      ue:unit ue:pc;
+    ] , [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 7 ;
+      lv2:symbol "port_attacktime" ;
+      lv2:name "Attack time" ;
+      lv2:default 0.0 ;
+      lv2:minimum 0.0 ;
+      lv2:maximum 300.0 ;
+      lv2:portProperty epp:hasStrictBounds;
+      ue:unit ue:ms;
+    ] , [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 8 ;
+      lv2:symbol "port_envelope" ;
+      lv2:name "Envelope" ;
+      lv2:default 100.0 ;
+      lv2:minimum 0.0 ;
+      lv2:maximum 100.0 ;
+      lv2:portProperty epp:hasStrictBounds;
+      ue:unit ue:pc;
+    ] , [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 9 ;
+      lv2:symbol "port_length" ;
+      lv2:name "Length" ;
+      lv2:default 100.0 ;
+      lv2:minimum 0.0 ;
+      lv2:maximum 100.0 ;
+      lv2:portProperty epp:hasStrictBounds;
+      ue:unit ue:pc;
+    ] , [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 10 ;
+      lv2:symbol "port_stretch" ;
+      lv2:name "Stretch" ;
+      lv2:default 100.0 ;
+      lv2:minimum 50.0 ;
+      lv2:maximum 150.0 ;
+      lv2:portProperty epp:hasStrictBounds;
+      ue:unit ue:pc;
+    ] , [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 11 ;
+      lv2:symbol "port_stereo_in" ;
+      lv2:name "Stereo width in" ;
+      lv2:default 100.0 ;
+      lv2:minimum 0.0 ;
+      lv2:maximum 150.0 ;
+      lv2:portProperty epp:hasStrictBounds;
+      ue:unit ue:pc;
+    ] , [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 12 ;
+      lv2:symbol "port_stereo_ir" ;
+      lv2:name "Stereo width IR" ;
+      lv2:default 100.0 ;
+      lv2:minimum 0.0 ;
+      lv2:maximum 150.0 ;
+      lv2:portProperty epp:hasStrictBounds;
+      ue:unit ue:pc;
+    ] , [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 13 ;
+      lv2:symbol "port_agc_sw" ;
+      lv2:name "Autogain" ;
+      lv2:default 1.0 ;
+      lv2:minimum 0.0 ;
+      lv2:maximum 1.0 ;
+      lv2:portProperty epp:hasStrictBounds;
+      lv2:portProperty lv2:toggled;
+    ] , [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 14 ;
+      lv2:symbol "port_dry_sw" ;
+      lv2:name "Dry" ;
+      lv2:default 1.0 ;
+      lv2:minimum 0.0 ;
+      lv2:maximum 1.0 ;
+      lv2:portProperty epp:hasStrictBounds;
+      lv2:portProperty lv2:toggled;
+    ] , [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 15 ;
+      lv2:symbol "port_dry_gain" ;
+      lv2:name "Dry gain" ;
+      lv2:default 0.0 ;
+      lv2:minimum -90.0 ;
+      lv2:maximum 6.0 ;
+      lv2:scalePoint [
+        rdfs:label "-inf";
+	rdf:value -90.0;
+      ];
+      lv2:portProperty epp:hasStrictBounds;
+      ue:unit ue:db;
+    ] , [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 16 ;
+      lv2:symbol "port_wet_sw" ;
+      lv2:name "Wet" ;
+      lv2:default 1.0 ;
+      lv2:minimum 0.0 ;
+      lv2:maximum 1.0 ;
+      lv2:portProperty epp:hasStrictBounds;
+      lv2:portProperty lv2:toggled;
+    ] , [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 17 ;
+      lv2:symbol "port_wet_gain" ;
+      lv2:name "Wet gain" ;
+      lv2:default -10.0 ;
+      lv2:minimum -90.0 ;
+      lv2:maximum 6.0 ;
+      lv2:scalePoint [
+        rdfs:label "-inf";
+	rdf:value -90.0;
+      ];
+      lv2:portProperty epp:hasStrictBounds;
+      ue:unit ue:db;
+    ] ,
+
+########## Save/Restore ports ##########
+
+    [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 18 ;
+      lv2:symbol "port_fhash_0" ;
+      lv2:name "FileHash0" ;
+      lv2:default 0.0 ;
+    ] , [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 19 ;
+      lv2:symbol "port_fhash_1" ;
+      lv2:name "FileHash1" ;
+      lv2:default 0.0 ;
+    ] , [
+      a lv2:InputPort, lv2:ControlPort ;
+      lv2:index 20 ;
+      lv2:symbol "port_fhash_2" ;
+      lv2:name "FileHash2" ;
+      lv2:default 0.0 ;
+    ] ,
+
+########## Meter ports ##########
+
+    [
+      a lv2:OutputPort, lv2:ControlPort ;
+      lv2:index 21 ;
+      lv2:symbol "port_meter_dry_L" ;
+      lv2:name "Dry L meter" ;
+    ] , [
+      a lv2:OutputPort, lv2:ControlPort ;
+      lv2:index 22 ;
+      lv2:symbol "port_meter_dry_R" ;
+      lv2:name "Dry R meter" ;
+    ] , [
+      a lv2:OutputPort, lv2:ControlPort ;
+      lv2:index 23 ;
+      lv2:symbol "port_meter_wet_L" ;
+      lv2:name "Wet L meter" ;
+    ] , [
+      a lv2:OutputPort, lv2:ControlPort ;
+      lv2:index 24 ;
+      lv2:symbol "port_meter_wet_R" ;
+      lv2:name "Wet R meter" ;
+    ]
+.
