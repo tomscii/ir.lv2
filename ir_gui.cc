@@ -36,7 +36,7 @@
 #include "ir_modeind.h"
 #include "ir_wavedisplay.h"
 
-#define IR_UI_URI "http://factorial.hu/plugins/lv2/ir/gui"
+#define IR_UI_URI "http://tomszilagyi.github.io/plugins/lv2/ir/gui"
 
 #define PAD 2
 
@@ -1323,14 +1323,7 @@ static void about_button_cb(GtkWidget * about_button, gpointer data) {
 			     XS1 "\nIR is free software under the GNU GPL. There is ABSOLUTELY\n"
 			     "NO WARRANTY, not even for MERCHANTABILITY or FITNESS\n"
 			     "FOR A PARTICULAR PURPOSE." XS2 "\n\n"
-			     "<small>Homepage: <b>http://factorial.hu/plugins/lv2/ir</b></small>\n\n"
-			     "If you find this plugin useful, please\n"
-			     "consider buying me an item on my Amazon\n"
-			     "wishlist:\n"
-			     "<b><small>\nhttp://www.amazon.co.uk/wishlist/8KRTCLLQMIP7\n</small></b>\n"
-			     "... or donate a small amount to\n"
-			     "<b>tomszilagyi@gmail.com</b> via PayPal.\n\n"
-			     "Thank you!");
+			     "<small>Homepage: <b>http://tomszilagyi.github.io/plugins/ir.lv2</b></small>");
 	gtk_label_set_selectable(GTK_LABEL(label), TRUE);
 	gtk_container_add(GTK_CONTAINER(frame), label);
 	gtk_container_set_border_width(GTK_CONTAINER(frame), 2*PAD);
