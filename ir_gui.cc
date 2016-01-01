@@ -1331,8 +1331,8 @@ static void about_button_cb(GtkWidget * about_button, gpointer data) {
 			     "<span size=\"x-large\" weight=\"heavy\">"
 			     "IR</span><span size=\"x-large\">: LV2 Convolution Reverb\n"
 			     "</span>"
-			     S1 "version 1.3" S2
-			     "\n\nCopyright (C) 2011 <b>Tom Szilagyi</b>\n"
+			     S1 "version 1.3.2" S2
+			     "\n\nCopyright (C) 2011-2012 <b>Tom Szilagyi</b>\n"
 			     XS1 "\nIR is free software under the GNU GPL. There is ABSOLUTELY\n"
 			     "NO WARRANTY, not even for MERCHANTABILITY or FITNESS\n"
 			     "FOR A PARTICULAR PURPOSE." XS2 "\n\n"

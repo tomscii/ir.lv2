@@ -65,7 +65,7 @@ GUI, bare-bones use of the plugin (without GUI) is not feasible.
 Available versions
 ------------------
 
-Two versions are available for download.  Version 1.2 is absolutely
+Two versions are available for download.  Version 1.2.x is absolutely
 zero-latency, however its run() should only be called with the same
 power-of-two buffer sizes (eg. always 512 samples, or always 2048,
 etc) during the plugin's lifecycle, otherwise bad things happen. In
@@ -73,16 +73,21 @@ practice this means that you should NEVER EVER use this version with
 its parameters automated (even those listed as suitable for
 automation). Otherwise it works as you would expect.
 
-Version 1.3 uses additional internal buffering so automation and the
+Version 1.3.x uses additional internal buffering so automation and the
 seemingly random buffer sizes that occur when automating the plugin
 (calling run() with buffer lengths eg. 1785, 263, 761, 1287 etc.) is
 not an issue anymore. It works with automation (but see the note about
 parameters suitable for automation below), at the expense of
 introducing extra buffering. The resulting latency is reported to the
 host via standard LV2 mechanism. However, if this causes problems for
-you, feel free to use version 1.2 (and keep in mind that BOTH versions
+you, feel free to use version 1.2.x (and keep in mind that BOTH versions
 are completely unsupported by the author).
 
+Furthermore, there is a split of versions based on zita-convolver library
+compatibility. The last versions to compile against and work with 
+zita-convolver 2 are 1.2.1 and 1.3.1. Later versions in both lines
+(starting with 1.2.2 and 1.3.2) are compatible with zita-convolver 3.x.x 
+only.
 
 Known issues
 ------------
@@ -95,10 +100,9 @@ Known issues
   is the first place where a plugin can be certain about its input
   control values).
 
-* Ardour2 version needs to be recent enough (2.8.11 is not enough,
-  the fix is scheduled for Ardour2 2.8.12, at the moment you need a
-  fresh SVN checkout), otherwise you will likely run into this problem
-  with plugin automation: http://tracker.ardour.org/view.php?id=3214
+* Ardour2 version needs to be recent enough (2.8.12 or later), otherwise
+  you will likely run into this problem with plugin automation:
+  http://tracker.ardour.org/view.php?id=3214
   (This applies to IR 1.3. You don't want to automate IR 1.2 at all.)
 
 If you would like to build the plugin for debugging, please see the
@@ -126,10 +130,11 @@ Getting impulse responses
 -------------------------
 
 Any good IR files should work, but if you don't yet have any
-favorites, try these:
+favorites, try this:
+* http://www.echochamber.ch/index.php/impulseresponses
+There used to be a very good collection here, but seem like its gone:
 * http://rhythminmind.net/1313/?cat=182
   (in particular, 'True M7' is a good selection of True Stereo impulses)
-* http://www.echochamber.ch/responses/index.html
 
 Note that besides mono and stereo impulse response files, IR supports
 so-called 'True Stereo' impulses. These are four channel impulses that
@@ -197,8 +202,10 @@ parameter (only one resampling is done). The well-known libsndfile
 library is used for reading the impulse response sound files.
 
 zita-convolver is written by Fons Adriaensen and can be downloaded
-from: http://kokkinizita.net/linuxaudio/downloads/index.html
-Tested (known to work) version: zita-convolver-2.0.0
+from: http://kokkinizita.linuxaudio.org/linuxaudio/downloads/index.html
+Please note that zita-convolver-2.0.0 is required for IR versions up to
+1.2.1 and 1.3.1; IR 1.2.2 / 1.3.2 and later versions require the newer
+zita-convolver-3.x.x library (these are incompatible library versions).
 
 The libsndfile and libsamplerate libraries are written by Erik de
 Castro Lopo and are widely used throughout the Linux Audio
@@ -223,6 +230,16 @@ install' (and is not built by a simple 'make').
 
 In case of doubt, please consult the Makefile. You should be able to
 figure it out from there.
+
+If you run into stability problems with running the plugin, please
+consult the top of ir.cc and see if changing the parameters helps you.
+Look for these definitions (after a block of explanatory comments):
+
+#define CONVPROC_SCHEDULER_PRIORITY 0
+#define CONVPROC_SCHEDULER_CLASS SCHED_FIFO
+#define THREAD_SYNC_MODE true
+
+After changing these, simple recompile and reinstall the plugin.
 
 
 Show your love
