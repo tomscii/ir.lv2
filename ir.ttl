@@ -9,24 +9,24 @@
 @prefix uiext: <http://lv2plug.in/ns/extensions/ui#>.
 
 
-<http://factorial.hu/plugins/lv2/ir/gui>
+<http://tomszilagyi.github.io/plugins/lv2/ir/gui>
     a uiext:GtkUI;
     uiext:binary <ir_gui.so>;
     lv2:requiredFeature <http://lv2plug.in/ns/ext/instance-access>;
     lv2:requiredFeature uiext:makeResident.
 
-<http://factorial.hu/plugins/lv2/ir>
+<http://tomszilagyi.github.io/plugins/lv2/ir>
     a lv2:Plugin;
     a lv2:ReverbPlugin;
     doap:name "IR";
     doap:license <http://usefulinc.com/doap/licenses/gpl>;
     doap:maintainer [
       foaf:name "Tom Szilagyi";
-      foaf:homepage <http://factorial.hu/>;
+      foaf:homepage <http://tomszilagyi.github.io/>;
       foaf:mbox <mailto:tomszilagyi@gmail.com>;
     ];
 
-    uiext:ui <http://factorial.hu/plugins/lv2/ir/gui>;
+    uiext:ui <http://tomszilagyi.github.io/plugins/lv2/ir/gui>;
 
 ########## Audio I/O ports ##########
 

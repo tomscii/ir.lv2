@@ -1,10 +1,12 @@
 IR: LV2 Convolution Reverb
 ==========================
 
-Author  : Tom Szilagyi <tomszilagyi@gmail.com>
-License : GNU GPL v2
-Format  : LV2 audio processing plugin
-Homepage: http://factorial.hu/plugins/lv2/ir
+![Screenshot](/sshot.png)
+
+Author: Tom Szilagyi (tomszilagyi gmail com)  
+License: GNU GPL v2  
+Format: LV2 audio processing plugin  
+Homepage: <http://tomszilagyi.github.io/plugins/ir.lv2>
 
 
 IR is a no-latency/low-latency, realtime, high performance signal
@@ -50,13 +52,13 @@ appropriate impulse library on each session. (Hint: use Bookmarks!)
 This is an LV2 plugin with its own GUI (GtkUI). You need an appropriate LV2
 host that supports the following extensions:
 
-* uiext: http://lv2plug.in/ns/extensions/ui/
-* instance-access: http://lv2plug.in/ns/ext/instance-access/
+* uiext: <http://lv2plug.in/ns/extensions/ui/>
+* instance-access: <http://lv2plug.in/ns/ext/instance-access/>
 
 The only seriously tested host at this time is Ardour 2.8.x (x >= 11);
 Ardour 3 should also work (moderately tested). Other LV2 hosts should
 also work, but YMMV. Compiled and tested on Linux only. Make sure to
-read the Known issues section below.
+read the **Known issues** section below.
 
 Please note that due to close coupling between the plugin and its
 GUI, bare-bones use of the plugin (without GUI) is not feasible.
@@ -65,29 +67,37 @@ GUI, bare-bones use of the plugin (without GUI) is not feasible.
 Available versions
 ------------------
 
-Two versions are available for download.  Version 1.2.x is absolutely
-zero-latency, however its run() should only be called with the same
-power-of-two buffer sizes (eg. always 512 samples, or always 2048,
-etc) during the plugin's lifecycle, otherwise bad things happen. In
-practice this means that you should NEVER EVER use this version with
-its parameters automated (even those listed as suitable for
-automation). Otherwise it works as you would expect.
+Two versions are available for download. **Version 1.2.x** (contained
+in git branch `zero-latency`) is absolutely zero-latency, however
+its run() should only be called with the same power-of-two buffer
+sizes (eg. always 512 samples, or always 2048, etc) during the
+plugin's lifecycle, otherwise bad things happen. In practice this
+means that you should NEVER EVER use this version with its parameters
+automated (even those listed as suitable for automation). Otherwise it
+works as you would expect.
 
-Version 1.3.x uses additional internal buffering so automation and the
-seemingly random buffer sizes that occur when automating the plugin
-(calling run() with buffer lengths eg. 1785, 263, 761, 1287 etc.) is
-not an issue anymore. It works with automation (but see the note about
-parameters suitable for automation below), at the expense of
-introducing extra buffering. The resulting latency is reported to the
-host via standard LV2 mechanism. However, if this causes problems for
-you, feel free to use version 1.2.x (and keep in mind that BOTH versions
-are completely unsupported by the author).
+**Version 1.3.x** (in git branch `automatable`) uses additional
+internal buffering so automation and the seemingly random buffer sizes
+that occur when automating the plugin (calling run() with buffer
+lengths eg. 1785, 263, 761, 1287 etc.) is not an issue anymore. It
+works with automation (*but see the note about parameters suitable for
+automation below*), at the expense of introducing extra buffering. The
+resulting latency is reported to the host via standard LV2
+mechanism. However, if this causes problems for you, feel free to use
+version 1.2.x (and keep in mind that BOTH versions are completely
+unsupported by the author).
 
 Furthermore, there is a split of versions based on zita-convolver library
-compatibility. The last versions to compile against and work with 
+compatibility. The last versions to compile against and work with
 zita-convolver 2 are 1.2.1 and 1.3.1. Later versions in both lines
-(starting with 1.2.2 and 1.3.2) are compatible with zita-convolver 3.x.x 
+(starting with 1.2.2 and 1.3.2) are compatible with zita-convolver 3.x.x
 only.
+
+Note that versions in the `automatable` branch are not superior to the
+corresponding `zero-latency` version; they are just different. HINT:
+If you never use plugin automation on IR, try `zero-latency`. If you
+absolutely need automation, or you have a problem with `zero-latency`
+then use `automatable` and read the section about Automation below.
 
 Known issues
 ------------
@@ -102,8 +112,21 @@ Known issues
 
 * Ardour2 version needs to be recent enough (2.8.12 or later), otherwise
   you will likely run into this problem with plugin automation:
-  http://tracker.ardour.org/view.php?id=3214
+  <http://tracker.ardour.org/view.php?id=3214>
   (This applies to IR 1.3. You don't want to automate IR 1.2 at all.)
+
+* Currently Ardour does not have latency compensation on busses. If
+  you use IR 1.3, and use it on eg. your drum bus, you may not get
+  exactly what you want.
+
+* When using a version with zita-convolver 2, you may or may not run
+  into issues while freewheeling (eg. Ardour session export). In
+  effect, zita-convolver does not wait for its worker threads to
+  complete, so if the library is called too often (not in realtime),
+  there may be "soft xruns" in the plugin's output. Please listen to
+  the output carefully, or bounce in realtime. *There is no such
+  problem with zita-convolver 3.x.x, so when in doubt, use the newer
+  version!*
 
 If you would like to build the plugin for debugging, please see the
 Makefile for instructions.
@@ -112,15 +135,19 @@ Makefile for instructions.
 Automation
 ----------
 
+**This only applies to IR 1.3.x (automatable). Versions in the 1.2.x
+  branch (zero-latency) are not suited to automation at all!**
+
 The following plugin controls are internally smoothed (their effects are
 protected from zipper noise) and thus are suitable for host automation:
+
  * Stereo width of input (but not of impulse response!)
  * Dry gain fader & on/off switch
  * Wet gain fader & on/off switch
  * Autogain on/off switch
 
 Changing other controls result in an IR vector recalculation and
-reinitialisation of the convolution engine. Those controls are *not*
+reinitialisation of the convolution engine. Those controls are **not**
 suited for automation. Changes to non-automatable controls are
 blissfully ignored when coming from automation (as opposed to real
 user interaction).
@@ -131,9 +158,12 @@ Getting impulse responses
 
 Any good IR files should work, but if you don't yet have any
 favorites, try this:
-* http://www.echochamber.ch/index.php/impulseresponses
+
+* <http://www.echochamber.ch/index.php/impulseresponses>
+
 There used to be a very good collection here, but seem like its gone:
-* http://rhythminmind.net/1313/?cat=182
+
+* <http://rhythminmind.net/1313/?cat=182>
   (in particular, 'True M7' is a good selection of True Stereo impulses)
 
 Note that besides mono and stereo impulse response files, IR supports
@@ -150,8 +180,8 @@ will want to recursively convert a full directory tree of such files.
 
 This is easiest done using the 'convert4chan' utility supplied with
 this plugin. It recursively converts a directory tree containing
-*[LR].wav files to 4-channel files (*4.wav). Build the utility by
-issuing 'make convert4chan'. The program takes zero or one
+\*[LR].wav files to 4-channel files (\*4.wav). Build the utility by
+issuing `make convert4chan`. The program takes zero or one
 argument. In the former case, the directory tree under the current
 working directory is converted, in the latter case the argument is
 used as root directory. The conversion does not remove the source
@@ -180,7 +210,7 @@ after a session reload).
 The problem is solved by saving a 64-bit hash of the filename across
 three floating point control ports. The corresponding hash-table
 (along with global IR configuration data, eg. bookmarks) is stored in
-the user's home directory in a file called ~/.ir_save in human
+the user's home directory in a file called `~/.ir_save` in human
 readable form (however, modify it only if you know what you are doing,
 and make sure to back it up first).
 
@@ -202,7 +232,7 @@ parameter (only one resampling is done). The well-known libsndfile
 library is used for reading the impulse response sound files.
 
 zita-convolver is written by Fons Adriaensen and can be downloaded
-from: http://kokkinizita.linuxaudio.org/linuxaudio/downloads/index.html
+from: <http://kokkinizita.linuxaudio.org/linuxaudio/downloads/index.html>
 Please note that zita-convolver-2.0.0 is required for IR versions up to
 1.2.1 and 1.3.1; IR 1.2.2 / 1.3.2 and later versions require the newer
 zita-convolver-3.x.x library (these are incompatible library versions).
@@ -219,14 +249,14 @@ required.
 Compiling and installing
 ------------------------
 
-If you have the above dependencies installed, a 'make' and (as root)
-'make install' is all you need to use the plugin. The LV2 plugin
+If you have the above dependencies installed, a `make` and (as root)
+`make install` is all you need to use the plugin. The LV2 plugin
 bundle is installed under /usr/lib/lv2/ by default (please edit the
 Makefile to suit your needs if this is not what you want).
 
-Issue 'make convert4chan' to build the convert4chan utility described
-above. This is for local use only, it is not installed by 'make
-install' (and is not built by a simple 'make').
+Issue `make convert4chan` to build the convert4chan utility described
+above. This is for local use only, it is not installed by `make
+install` (and is not built by a simple `make`).
 
 In case of doubt, please consult the Makefile. You should be able to
 figure it out from there.
@@ -235,27 +265,8 @@ If you run into stability problems with running the plugin, please
 consult the top of ir.cc and see if changing the parameters helps you.
 Look for these definitions (after a block of explanatory comments):
 
-#define CONVPROC_SCHEDULER_PRIORITY 0
-#define CONVPROC_SCHEDULER_CLASS SCHED_FIFO
-#define THREAD_SYNC_MODE true
+    #define CONVPROC_SCHEDULER_PRIORITY 0
+    #define CONVPROC_SCHEDULER_CLASS SCHED_FIFO
+    #define THREAD_SYNC_MODE true
 
 After changing these, simple recompile and reinstall the plugin.
-
-
-Show your love
---------------
-
-I have spent 3 weeks of my spare time developing this plugin (instead
-of making music or making a living) because I desperately needed
-something like this. I hope you also find it highly useful, and just
-like me, find pleasure in the quality of reverb that takes your mixes
-to the next level. In this case please consider buying me an item on
-my Amazon wishlist:
-
-http://www.amazon.co.uk/wishlist/8KRTCLLQMIP7
-
-... or donate a small amount to tomszilagyi@gmail.com via PayPal.
-
-Thank you!
-
-Tom

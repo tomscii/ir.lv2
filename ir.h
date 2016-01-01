@@ -29,7 +29,7 @@
 #include <samplerate.h>
 #include <zita-convolver.h>
 
-#define IR_URI                    "http://factorial.hu/plugins/lv2/ir"
+#define IR_URI                    "http://tomszilagyi.github.io/plugins/lv2/ir"
 
 #define BSIZE       0x4000      /* Blocksize for soundfile data access */
 #define BSIZE_SR    0x1000      /* Blocksize for SRC */
