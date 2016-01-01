@@ -128,10 +128,15 @@ static void connectPortIR(LV2_Handle instance,
 	case IR_PORT_METER_WET_R:
 		ir->port_meter_wet_R = (float*)data;
 		break;
+
+	/* Latency port */
+	case IR_PORT_LATENCY:
+		ir->port_latency = (float*)data;
+		break;
 	}
 }
 
-void free_ir_samples(IR * ir) {
+static void free_ir_samples(IR * ir) {
 	if (ir->ir_samples != 0) {
 		float **p = ir->ir_samples;
 		while (*p) {
@@ -142,7 +147,7 @@ void free_ir_samples(IR * ir) {
 	}
 }
 
-void free_conv_safely(Convproc * conv) {
+static void free_conv_safely(Convproc * conv) {
 	unsigned int state;
 	struct timespec treq;
 	struct timespec trem;
@@ -166,7 +171,7 @@ void free_conv_safely(Convproc * conv) {
 	delete conv;	
 }
 
-void free_convproc(IR * ir) {
+static void free_convproc(IR * ir) {
 	free_conv_safely(ir->conv_0);
 	ir->conv_0 = 0;
 	free_conv_safely(ir->conv_1);
@@ -196,6 +201,7 @@ static void cleanupIR(LV2_Handle instance) {
 		save_path(keyfile, ir->source_path);
 		free(ir->source_path);
 	}
+
 	free(instance);
 }
 
@@ -271,7 +277,7 @@ static int load_sndfile(IR * ir) {
  * This function sets up the resampling operation
  * return: 0: OK, 1: OK, no SRC needed, -1: error
  */
-int resample_init(IR * ir) {
+static int resample_init(IR * ir) {
 
 	float stretch = *ir->port_stretch / 100.0;
 	float fs_out = ir->sample_rate * stretch;
@@ -333,7 +339,7 @@ int resample_init(IR * ir) {
  * return: 0: OK, not ready (call it again); 1: ready; -1: error
  * ir->src_progress can be used to track progress of resampling
  */
-int resample_do(IR * ir) {
+static int resample_do(IR * ir) {
 	if (!ir->src_in_frames) {
 		return 1;
 	}
@@ -359,7 +365,7 @@ int resample_do(IR * ir) {
 }
 
 /* Finish resampling; call this after resample_do returned 1 */
-void resample_cleanup(IR * ir) {
+static void resample_cleanup(IR * ir) {
 	if (ir->src_out_frames < ir->ir_nfram) {
 		ir->ir_nfram = ir->src_out_frames;
 	}
@@ -368,7 +374,7 @@ void resample_cleanup(IR * ir) {
 }
 
 /* In place processing on ir_samples[] */
-void process_envelopes(IR * ir) {
+static void process_envelopes(IR * ir) {
 
 	int attack_time_s = (int)*ir->port_attacktime * ir->sample_rate / 1000;
 	float attack_pc = *ir->port_attack;
@@ -381,7 +387,7 @@ void process_envelopes(IR * ir) {
 }
 
 /* Mid-Side based Stereo width effect */
-void ms_stereo(float width, float * lp, float * rp, int length) {
+static void ms_stereo(float width, float * lp, float * rp, int length) {
 
 	float w = width / 100.0f;
 	float x = (1.0 - w) / (1.0 + w); /* M-S coeff.; L_out = L + x*R; R_out = x*L + R */
@@ -401,7 +407,7 @@ void ms_stereo(float width, float * lp, float * rp, int length) {
  *   parameters: all plugin parameters except stretch,
  *               stereo_in, dry_*, wet_*
  */
-void prepare_convdata(IR * ir) {
+static void prepare_convdata(IR * ir) {
 
 	if (!ir->resampled_samples || !ir->ir_nfram || !ir->nchan) {
 		return;
@@ -462,7 +468,7 @@ void prepare_convdata(IR * ir) {
 }
 
 /* Initialise (the next) convolution engine to use */
-void init_conv(IR * ir) {
+static void init_conv(IR * ir) {
 
 	Convproc * conv;
 	int req_to_use;
@@ -556,7 +562,7 @@ void init_conv(IR * ir) {
 	ir->conv_req_to_use = req_to_use;
 }
 
-gpointer IR_configurator_thread(gpointer data) {
+static gpointer IR_configurator_thread(gpointer data) {
 
 	IR * ir = (IR *)data;
 
@@ -564,7 +570,7 @@ gpointer IR_configurator_thread(gpointer data) {
 	struct timespec trem;
 
 	while (!ir->conf_thread_exit) {
-		if (ir->run && !ir->first_conf_done) {
+		if ((ir->run > 0) && !ir->first_conf_done) {
 			uint64_t fhash = fhash_from_ports(ir->port_fhash_0,
 							  ir->port_fhash_1,
 							  ir->port_fhash_2);
@@ -617,7 +623,9 @@ static LV2_Handle instantiateIR(const LV2_Descriptor *descriptor,
 	ir->sample_rate = sample_rate;
 	ir->reinit_pending = 0;
 	ir->maxsize = MAXSIZE;
-	ir->block_length = 1024;
+	ir->block_length = IR_DEFAULT_JACK_BUFLEN;
+	ir->bufconv_pos = 0;
+	ir->run = -5; /* do nothing for the first 5 run() calls */
 
 	ir->load_sndfile = load_sndfile;
 	ir->resample_init = resample_init;
@@ -634,7 +642,7 @@ static LV2_Handle instantiateIR(const LV2_Descriptor *descriptor,
 }
 
 #define ACC_MAX(m,v) (((fabs(v))>(m))?fabs(v):(m))
-static void runIR(LV2_Handle instance, uint32_t sample_count) {
+static void runIR(LV2_Handle instance, uint32_t n) {
 
 	IR * ir = (IR *)instance;
 	Convproc * conv;
@@ -649,7 +657,21 @@ static void runIR(LV2_Handle instance, uint32_t sample_count) {
 	float wet_L_meter = 0.0;
 	float wet_R_meter = 0.0;
 
-	ir->run = 1;
+	float width = ir->width;
+	float dry_gain = ir->dry_gain;
+	float wet_gain = ir->wet_gain;
+
+	if (ir->run < 0) { /* XXX safety measure: wait until buffer size stabilizes, bypass until then */
+		if ((in_L != out_L) || (in_R != out_R)) {
+			for (unsigned int j = 0; j < n; j++) {
+				out_L[j] = in_L[j];
+				out_R[j] = in_R[j];
+			}
+		}
+		ir->run++;
+		*ir->port_latency = ir->block_length;
+		return;
+	}
 
 	if (ir->conv_in_use != ir->conv_req_to_use) {
 		/* call stop_process() on the conv being switched away from
@@ -667,11 +689,38 @@ static void runIR(LV2_Handle instance, uint32_t sample_count) {
 		ir->conv_in_use = ir->conv_req_to_use;
 		ir->autogain = ir->autogain_new;
 		//printf("IR engine switching to conv_%d  autogain = %f\n", ir->conv_in_use, ir->autogain);
+
+		/* fade it up */
+		wet_gain = 0.0;
 	}
 	if (ir->conv_in_use == 0) {
 		conv = ir->conv_0;
 	} else {
 		conv = ir->conv_1;
+	}
+
+	if (n > ir->block_length) {
+		/* MUST range from IR_DEFAULT_JACK_BUFLEN<<1 to IR_MAXIMUM_JACK_BUFLEN */
+		if ((n == 2048) || (n == 4096) || (n = 8192) || (n = 16384)) {
+			/* block size seems to be a valid JACK buffer size */
+			ir->block_length = n;
+			ir->reinit_pending = 1;
+			ir->bufconv_pos = 0;
+			conv = 0;
+			//printf("IR block_length = %d\n", n);
+		}
+	}
+
+	if (n > IR_MAXIMUM_JACK_BUFLEN) {
+		fprintf(stderr, "IR: being run() with buffer length %d greater than largest supported length %d, bypassing...\n",
+			n, IR_MAXIMUM_JACK_BUFLEN);		
+		if ((in_L != out_L) || (in_R != out_R)) {
+			for (unsigned int j = 0; j < n; j++) {
+				out_L[j] = in_L[j];
+				out_R[j] = in_R[j];
+			}
+		}
+		return;
 	}
 
 	float agc_gain_raw = (*ir->port_agc_sw > 0.0f) ? DB_CO(ir->autogain) : 1.0f;
@@ -682,76 +731,76 @@ static void runIR(LV2_Handle instance, uint32_t sample_count) {
 	float dry_gain_raw = DB_CO(*ir->port_dry_gain) * dry_sw;
 	float wet_gain_raw = DB_CO(*ir->port_wet_gain) * wet_sw * agc_gain_raw;
 
-	float width = ir->width;
-	float dry_gain = ir->dry_gain;
-	float wet_gain = ir->wet_gain;
-
-	if (sample_count != ir->block_length) {
-		if ((sample_count == 1) || (sample_count == 2) || (sample_count == 4) || (sample_count == 8) ||
-		    (sample_count == 16) || (sample_count == 32) || (sample_count == 64) || (sample_count == 128) ||
-		    (sample_count == 256) || (sample_count == 512) || (sample_count == 1024) || (sample_count == 2048) ||
-		    (sample_count == 4096) || (sample_count == 8192) || (sample_count == 16384) || (sample_count == 32768)) {
-			/* block size seems valid - sometimes Ardour runs us with an
-			   irregular block size (eg. when muting out the track) */
-			ir->block_length = sample_count;
-			ir->reinit_pending = 1;
-			conv = 0;
-		}
-	}
-
-	int n = sample_count;
-	float * p, * q;
+	float * pi, * qi, * po, * qo, * dL, * dR;
 	float dry_L, dry_R, wet_L, wet_R;
+	unsigned int bcp = ir->bufconv_pos;
 
 	if (conv != 0) {
-		p = conv->inpdata(0);
-		q = conv->inpdata(1);
+		pi = conv->inpdata(0);
+		qi = conv->inpdata(1);
+		po = conv->outdata(0);
+		qo = conv->outdata(1);
+		dL = ir->drybuf_L;
+		dR = ir->drybuf_R;
 		float x;
-		for (int j = 0; j < n; j++) {
+		for (unsigned int j = 0; j < n; j++) {
 			width = width * SMOOTH_CO_1 + width_raw * SMOOTH_CO_0;
 			x = (1.0 - width) / (1.0 + width); /* M-S coeff. */
-			p[j] = in_L[j] + x * in_R[j];
-			q[j] = in_R[j] + x * in_L[j];
-		}
-		
-		conv->process();		
+			pi[bcp] = in_L[j] + x * in_R[j];
+			qi[bcp] = in_R[j] + x * in_L[j];
 
-		p = conv->outdata(0);
-		q = conv->outdata(1);
-		for (int j = 0; j < n; j++) {
 			dry_gain = SMOOTH_CO_1 * dry_gain + SMOOTH_CO_0 * dry_gain_raw;
 			wet_gain = SMOOTH_CO_1 * wet_gain + SMOOTH_CO_0 * wet_gain_raw;
-			dry_L = in_L[j] * dry_gain;
-			dry_R = in_R[j] * dry_gain;
-			wet_L = p[j] * wet_gain;
-			wet_R = q[j] * wet_gain;
+			dry_L = dL[bcp];
+			dry_R = dR[bcp];
+			dL[bcp] = in_L[j] * dry_gain;
+			dR[bcp] = in_R[j] * dry_gain;
+			wet_L = po[bcp] * wet_gain;
+			wet_R = qo[bcp] * wet_gain;
 			dry_L_meter = ACC_MAX(dry_L_meter, dry_L);
 			dry_R_meter = ACC_MAX(dry_R_meter, dry_R);
 			wet_L_meter = ACC_MAX(wet_L_meter, wet_L);
 			wet_R_meter = ACC_MAX(wet_R_meter, wet_R);
 			out_L[j] = dry_L + wet_L;
 			out_R[j] = dry_R + wet_R;
+
+			if (++bcp == ir->block_length) {
+				bcp = 0;
+				conv->process();
+			}
 		}
 	} else { /* convolution engine not available */
-		for (int j = 0; j < n; j++) {
+		dL = ir->drybuf_L;
+		dR = ir->drybuf_R;
+		for (unsigned int j = 0; j < n; j++) {
 			dry_gain = SMOOTH_CO_1 * dry_gain + SMOOTH_CO_0 * dry_gain_raw;
-			dry_L = in_L[j] * dry_gain;
-			dry_R = in_R[j] * dry_gain;
+			dry_L = dL[bcp];
+			dry_R = dR[bcp];
+			dL[bcp] = in_L[j] * dry_gain;
+			dR[bcp] = in_R[j] * dry_gain;
 			dry_L_meter = ACC_MAX(dry_L_meter, dry_L);
 			dry_R_meter = ACC_MAX(dry_R_meter, dry_R);
 			out_L[j] = dry_L;
 			out_R[j] = dry_R;
+
+			if (++bcp == ir->block_length) {
+				bcp = 0;
+			}
 		}
 	}
 
 	ir->width = width;
 	ir->dry_gain = dry_gain;
 	ir->wet_gain = wet_gain;
+	ir->bufconv_pos = bcp;
 
 	*ir->port_meter_dry_L = dry_L_meter;
 	*ir->port_meter_dry_R = dry_R_meter;
 	*ir->port_meter_wet_L = wet_L_meter;
 	*ir->port_meter_wet_R = wet_R_meter;
+
+	*ir->port_latency = ir->block_length;
+	ir->run = 1;
 }
 
 const void * extdata_IR(const char * uri) {

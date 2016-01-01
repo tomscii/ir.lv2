@@ -40,11 +40,6 @@
 
 #define PAD 2
 
-typedef struct {
-	uint32_t port_index;
-	float value;
-} port_event_t;
-
 #define ADJ_PREDELAY   0
 #define ADJ_ATTACK     1
 #define ADJ_ATTACKTIME 2
@@ -88,6 +83,7 @@ struct control {
 
 	IR * ir;
 
+	float port_buffer[IR_N_PORTS];
 	GSList * port_event_q;
 	GtkWidget * vbox_top;
 	GtkWidget * hbox_waitplugin;
@@ -170,7 +166,12 @@ struct control {
 	int key_pressed;
 };
 
-void reset_values(struct control * cp);
+typedef struct {
+	uint32_t port_index;
+	float value;
+} port_event_t;
+
+static void reset_values(struct control * cp);
 
 /* adjustments with linear or logarithmic scale */
 #define LOG_SCALE_MIN       1.0
@@ -178,9 +179,25 @@ void reset_values(struct control * cp);
 #define INVLOG_SCALE_MIN   10.0
 #define INVLOG_SCALE_MAX  100.0
 
-void adjustment_changed_cb(GtkAdjustment * adj, gpointer data);
+static void adjustment_changed_cb(GtkAdjustment * adj, gpointer data);
 
-int get_adj_index(struct control * cp, GtkAdjustment * adj) {
+/* return 1 if value has actually changed */
+static int set_port_value(struct control * cp, int port_index, float value) {
+	if (fabs(cp->port_buffer[port_index] - value) < 0.000001) {
+		return 0;
+	}
+	cp->port_buffer[port_index] = value;
+	return 1;
+}
+
+static void send_port_value_to_host(struct control * cp, int port_index, float value) {
+	if (set_port_value(cp, port_index, value)) {
+		cp->write_function(cp->controller, port_index, sizeof(float),
+				   0 /* default format */, &value);
+	}
+}
+
+static int get_adj_index(struct control * cp, GtkAdjustment * adj) {
 
 	if (adj == cp->adj_predelay) {
 		return ADJ_PREDELAY;
@@ -206,7 +223,7 @@ int get_adj_index(struct control * cp, GtkAdjustment * adj) {
 	return -1;
 }
 
-double convert_scale_to_real(int idx, double scale) {
+static double convert_scale_to_real(int idx, double scale) {
 	int log = adj_descr_table[idx].log;
 	double y;
 	double min = adj_descr_table[idx].min;
@@ -226,7 +243,7 @@ double convert_scale_to_real(int idx, double scale) {
 	return real;
 }
 
-double convert_real_to_scale(int idx, double real) {
+static double convert_real_to_scale(int idx, double real) {
 	int log = adj_descr_table[idx].log;
 	double min = adj_descr_table[idx].min;
 	double max = adj_descr_table[idx].max;
@@ -245,18 +262,18 @@ double convert_real_to_scale(int idx, double real) {
 	return scale;
 }
 
-double get_adjustment(struct control * cp, GtkAdjustment * adj) {
+static double get_adjustment(struct control * cp, GtkAdjustment * adj) {
 	double y = gtk_adjustment_get_value(adj);
 	int idx = get_adj_index(cp, adj);
 	return convert_scale_to_real(idx, y);
 }
 
-void set_adjustment(struct control * cp, GtkAdjustment * adj, double x) {
+static void set_adjustment(struct control * cp, GtkAdjustment * adj, double x) {
 	int idx = get_adj_index(cp, adj);
 	gtk_adjustment_set_value(adj, convert_real_to_scale(idx, x));
 }
 
-GtkAdjustment * create_adjustment(int idx, gpointer data) {
+static GtkAdjustment * create_adjustment(int idx, gpointer data) {
 	GtkObject * adj = NULL;
 	gdouble def = adj_descr_table[idx].def;
 	gdouble min = adj_descr_table[idx].min;
@@ -275,7 +292,7 @@ GtkAdjustment * create_adjustment(int idx, gpointer data) {
 }
 
 
-void set_agc_label(struct control * cp) {
+static void set_agc_label(struct control * cp) {
 	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(cp->toggle_agc_sw))) {
 		char str[32];
 		snprintf(str, 32, "Autogain %+.1f dB", cp->ir->autogain_new);
@@ -289,7 +306,7 @@ void set_agc_label(struct control * cp) {
 #define S2 "</span>"
 #define XS1 "<span size=\"x-small\">"
 #define XS2 "</span>"
-void set_label(struct control * cp, int idx) {
+static void set_label(struct control * cp, int idx) {
 
 	char str[1024];
 	GtkWidget * label = NULL;
@@ -362,7 +379,7 @@ void set_label(struct control * cp, int idx) {
 	gtk_label_set_markup(GTK_LABEL(label), str);
 }
 
-void refresh_gui_on_load(struct control * cp) {
+static void refresh_gui_on_load(struct control * cp) {
 	char str[1024];
 	const char * chn = (cp->ir->nchan > 1) ? "channels" : "channel";
 	float secs = (float)cp->ir->source_nfram / cp->ir->source_samplerate;
@@ -396,7 +413,7 @@ void refresh_gui_on_load(struct control * cp) {
 	ir_modeind_set_channels(IR_MODEIND(cp->mode_ind), cp->ir->nchan);
 }
 
-gpointer gui_load_thread(gpointer data) {
+static gpointer gui_load_thread(gpointer data) {
 	struct control * cp = (struct control*)data;
 	int r = cp->ir->resample_init(cp->ir);
 	if (r == 0) {
@@ -416,7 +433,7 @@ gpointer gui_load_thread(gpointer data) {
 	return NULL;
 }
 
-gint gui_load_timeout_callback(gpointer data) {
+static gint gui_load_timeout_callback(gpointer data) {
 	struct control * cp = (struct control*)data;
 	if (cp->ir->reinit_running) {
 		ir_wavedisplay_set_progress(IR_WAVEDISPLAY(cp->wave_display), cp->ir->src_progress);
@@ -432,7 +449,7 @@ gint gui_load_timeout_callback(gpointer data) {
 	return FALSE;
 }
 
-void gui_load_sndfile(struct control * cp, char * filename) {
+static void gui_load_sndfile(struct control * cp, char * filename) {
 
 	if (cp->ir->reinit_running || cp->gui_load_thread) {
 		return;
@@ -519,7 +536,7 @@ static void browse_button_clicked(GtkWidget * w, gpointer data) {
 	gtk_widget_destroy(dialog);
 }
 
-int key_pressed_cb(GtkWidget * widget, GdkEventKey * event, gpointer data) {
+static int key_pressed_cb(GtkWidget * widget, GdkEventKey * event, gpointer data) {
 	struct control * cp = (struct control *)data;
 	if (cp->ir->reinit_running) {
 		return FALSE;
@@ -528,7 +545,7 @@ int key_pressed_cb(GtkWidget * widget, GdkEventKey * event, gpointer data) {
 	return FALSE;
 }
 
-void save_value(struct control * cp, int port, float value) {
+static void save_value(struct control * cp, int port, float value) {
 	switch (port) {
 	case IR_PORT_PREDELAY: cp->predelay = value;
 		break;
@@ -547,7 +564,7 @@ void save_value(struct control * cp, int port, float value) {
 	}
 }
 
-void reset_values(struct control * cp) {
+static void reset_values(struct control * cp) {
 	set_adjustment(cp, cp->adj_predelay, cp->predelay);
 	set_adjustment(cp, cp->adj_attack, cp->attack);
 	set_adjustment(cp, cp->adj_attacktime, cp->attacktime);
@@ -557,7 +574,7 @@ void reset_values(struct control * cp) {
 	set_adjustment(cp, cp->adj_stereo_ir, cp->stereo_ir);
 }
 
-void reset_value(struct control * cp, GtkAdjustment * adj) {
+static void reset_value(struct control * cp, GtkAdjustment * adj) {
 	if (adj == cp->adj_predelay) {
 		set_adjustment(cp, adj, cp->predelay);
 	} else if (adj == cp->adj_attack) {
@@ -575,7 +592,7 @@ void reset_value(struct control * cp, GtkAdjustment * adj) {
 	}
 }
 
-int key_released_cb(GtkWidget * widget, GdkEventKey * event, gpointer data) {
+static int key_released_cb(GtkWidget * widget, GdkEventKey * event, gpointer data) {
 	struct control * cp = (struct control *)data;
 	GtkAdjustment * adj = NULL;
 	int port = 0;
@@ -617,15 +634,14 @@ int key_released_cb(GtkWidget * widget, GdkEventKey * event, gpointer data) {
 	save_value(cp, port, value);
 
 	//printf("on button_release adj value = %f\n", value);
-	cp->write_function(cp->controller, port, sizeof(float),
-			   0 /* default format */, &value);
+	send_port_value_to_host(cp, port, value);
 
 	cp->ir->run = 0;
 	cp->ir->reinit_pending = 1;
 	return FALSE;
 }
 
-void update_envdisplay(struct control * cp) {
+static void update_envdisplay(struct control * cp) {
 	int attack_time_s =
 		get_adjustment(cp, cp->adj_attacktime) *
 		(float)cp->ir->sample_rate / 1000.0;
@@ -638,7 +654,7 @@ void update_envdisplay(struct control * cp) {
 				     env_pc, length_pc, reverse);
 }
 
-void adjustment_changed_cb(GtkAdjustment * adj, gpointer data) {
+static void adjustment_changed_cb(GtkAdjustment * adj, gpointer data) {
 	struct control * cp = (struct control *)data;
 	float value = get_adjustment(cp, adj);
 	int port = 0;
@@ -692,11 +708,10 @@ void adjustment_changed_cb(GtkAdjustment * adj, gpointer data) {
 	}
 
 	//printf("adj changed to %f\n", value);
-	cp->write_function(cp->controller, port, sizeof(float),
-			   0 /* default format */, &value);
+	send_port_value_to_host(cp, port, value);
 }
 
-void toggle_button_cb(GtkWidget * widget, gpointer data) {
+static void toggle_button_cb(GtkWidget * widget, gpointer data) {
 
 	struct control * cp = (struct control *)data;
 	if (cp->ir->reinit_running && (widget == cp->toggle_reverse)) {
@@ -723,8 +738,7 @@ void toggle_button_cb(GtkWidget * widget, gpointer data) {
 		value = 0.0f;
 		text = "off";
 	}
-	cp->write_function(cp->controller, port, sizeof(float),
-			   0 /* default format */, &value);
+	send_port_value_to_host(cp, port, value);
 
 	if (port == IR_PORT_REVERSE) {
 		cp->ir->run = 0;
@@ -736,8 +750,8 @@ void toggle_button_cb(GtkWidget * widget, gpointer data) {
 	}
 }
 
-void irctrl_add_row(GtkWidget * table, int row, GtkWidget ** label, GtkAdjustment * adj,
-		    GtkWidget ** scale, int idx, gpointer data) {
+static void irctrl_add_row(GtkWidget * table, int row, GtkWidget ** label, GtkAdjustment * adj,
+			   GtkWidget ** scale, int idx, gpointer data) {
 
 	struct control * cp = (struct control *)data;
 	*label = gtk_label_new("");
@@ -757,10 +771,10 @@ void irctrl_add_row(GtkWidget * table, int row, GtkWidget ** label, GtkAdjustmen
 	gtk_table_attach_defaults(GTK_TABLE(table), *scale, 1, 3, row, row + 1);
 }
 
-void irctrl_add_row2(GtkWidget * table, int row,
-		     GtkWidget ** label, GtkAdjustment * adj1, GtkAdjustment * adj2,
-		     GtkWidget ** scale1, GtkWidget ** scale2,
-		     int idx, gpointer data) {
+static void irctrl_add_row2(GtkWidget * table, int row,
+			    GtkWidget ** label, GtkAdjustment * adj1, GtkAdjustment * adj2,
+			    GtkWidget ** scale1, GtkWidget ** scale2,
+			    int idx, gpointer data) {
 
 	struct control * cp = (struct control *)data;
 	*label = gtk_label_new("");
@@ -789,7 +803,7 @@ void irctrl_add_row2(GtkWidget * table, int row,
 	gtk_table_attach_defaults(GTK_TABLE(table), *scale2, 2, 3, row, row + 1);
 }
 
-GtkWidget * make_irctrl_frame(struct control * cp) {
+static GtkWidget * make_irctrl_frame(struct control * cp) {
 
 	GtkWidget * frame = gtk_frame_new(NULL);
 	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_ETCHED_IN);
@@ -842,7 +856,7 @@ GtkWidget * make_irctrl_frame(struct control * cp) {
 	return frame;
 }
 
-void agc_toggle_cb(GtkWidget * widget, gpointer data) {
+static void agc_toggle_cb(GtkWidget * widget, gpointer data) {
 	struct control * cp = (struct control *)data;
 	float value;
 	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget))) {
@@ -851,12 +865,11 @@ void agc_toggle_cb(GtkWidget * widget, gpointer data) {
 		value = 0.0f;
 	}
 
-	cp->write_function(cp->controller, IR_PORT_AGC_SW, sizeof(float),
-			   0 /* default format */, &value);
+	send_port_value_to_host(cp, IR_PORT_AGC_SW, value);
 	set_agc_label(cp);
 }
 
-GtkWidget * make_mixer_frame(struct control * cp) {
+static GtkWidget * make_mixer_frame(struct control * cp) {
 
 	GtkWidget * frame = gtk_frame_new(NULL);
 	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_ETCHED_IN);
@@ -1059,7 +1072,7 @@ static void files_selection_changed_cb(GtkTreeSelection * selection, gpointer da
         }
 }
 
-void tree_view_realized_cb(GtkWidget * widget, gpointer data) {
+static void tree_view_realized_cb(GtkWidget * widget, gpointer data) {
 
 	struct control * cp = (struct control *)data;
 
@@ -1091,7 +1104,7 @@ void tree_view_realized_cb(GtkWidget * widget, gpointer data) {
 	}
 }
 
-GtkWidget * make_lists_box(struct control * cp) {
+static GtkWidget * make_lists_box(struct control * cp) {
 
 	GtkWidget * hbox = gtk_hbox_new(FALSE, 0);
 	GtkWidget * vbox = gtk_vbox_new(FALSE, 0);
@@ -1180,7 +1193,7 @@ GtkWidget * make_lists_box(struct control * cp) {
 	return hbox;
 }
 
-gpointer reinit_thread(gpointer data) {
+static gpointer reinit_thread(gpointer data) {
 	struct control * cp = (struct control*)data;
 	if (cp->ir->resample_pending) {
 		int r = cp->ir->resample_init(cp->ir);
@@ -1202,7 +1215,7 @@ gpointer reinit_thread(gpointer data) {
 	return NULL;
 }
 
-gint reinit_timeout_callback(gpointer data) {
+static gint reinit_timeout_callback(gpointer data) {
 	struct control * cp = (struct control*)data;
 	if (!cp->ir->ir_samples || !cp->ir->ir_nfram) {
 		ir_wavedisplay_set_message(IR_WAVEDISPLAY(cp->wave_display), NULL);
@@ -1228,7 +1241,7 @@ gint reinit_timeout_callback(gpointer data) {
 	return FALSE;
 }
 
-gint timeout_callback(gpointer data) {
+static gint timeout_callback(gpointer data) {
 	struct control * cp = (struct control*)data;
 	if (cp->interrupt_threads) {
 		cp->timeout_tag = 0;
@@ -1250,7 +1263,7 @@ gint timeout_callback(gpointer data) {
 	return TRUE;
 }
 
-void chan_toggle_cb(GtkWidget * widget, gpointer data) {
+static void chan_toggle_cb(GtkWidget * widget, gpointer data) {
 
 	struct control * cp = (struct control *)data;
 	int i;
@@ -1280,7 +1293,7 @@ void chan_toggle_cb(GtkWidget * widget, gpointer data) {
 	}
 }
 
-void log_toggle_cb(GtkWidget * widget, gpointer data) {
+static void log_toggle_cb(GtkWidget * widget, gpointer data) {
 	struct control * cp = (struct control *)data;
 	if (cp->ir->reinit_running) {
 		g_signal_handler_block(widget, cp->log_toggle_cbid);
@@ -1318,7 +1331,7 @@ static void about_button_cb(GtkWidget * about_button, gpointer data) {
 			     "<span size=\"x-large\" weight=\"heavy\">"
 			     "IR</span><span size=\"x-large\">: LV2 Convolution Reverb\n"
 			     "</span>"
-			     S1 "version 1.2" S2
+			     S1 "version 1.3" S2
 			     "\n\nCopyright (C) 2011 <b>Tom Szilagyi</b>\n"
 			     XS1 "\nIR is free software under the GNU GPL. There is ABSOLUTELY\n"
 			     "NO WARRANTY, not even for MERCHANTABILITY or FITNESS\n"
@@ -1344,7 +1357,7 @@ static void about_button_cb(GtkWidget * about_button, gpointer data) {
 	gtk_widget_show_all(dialog);
 }
 
-GtkWidget * make_top_hbox(struct control * cp) {
+static GtkWidget * make_top_hbox(struct control * cp) {
 	GtkWidget * hbox = gtk_hbox_new(FALSE, PAD);
 	GtkWidget * frame = gtk_frame_new(NULL);
 	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_ETCHED_IN);
@@ -1396,7 +1409,7 @@ GtkWidget * make_top_hbox(struct control * cp) {
 	return hbox;
 }
 
-void make_gui_proper(struct control * cp) {
+static void make_gui_proper(struct control * cp) {
 
 	GtkWidget * vbox_top = cp->vbox_top;
 
@@ -1433,20 +1446,20 @@ void make_gui_proper(struct control * cp) {
 static void port_event(LV2UI_Handle ui, uint32_t port_index, uint32_t buffer_size,
 		       uint32_t format, const void * buffer);
 
-void replay_func(gpointer data, gpointer user_data) {
+static void replay_func(gpointer data, gpointer user_data) {
 	port_event_t * pe = (port_event_t *)data;
 	struct control * cp = (struct control*)user_data;
 	port_event((LV2UI_Handle)cp, pe->port_index, 0, 0, &pe->value);
 	free(pe);
 }
 
-void replay_port_events(struct control * cp) {
+static void replay_port_events(struct control * cp) {
 	GSList * q = cp->port_event_q;
 	g_slist_foreach(q, replay_func, cp);
 	g_slist_free(q);
 }
 
-gint waitplugin_timeout_callback(gpointer data) {
+static gint waitplugin_timeout_callback(gpointer data) {
 	struct control * cp = (struct control*)data;
 	if (cp->ir->first_conf_done) {
 		gtk_widget_destroy(cp->hbox_waitplugin);
@@ -1462,7 +1475,7 @@ gint waitplugin_timeout_callback(gpointer data) {
 	return TRUE;
 }
 
-GtkWidget * make_gui(struct control * cp) {
+static GtkWidget * make_gui(struct control * cp) {
 
 	cp->toggle_reverse = gtk_toggle_button_new_with_label("Reverse");
 	g_signal_connect(cp->toggle_reverse, "toggled",
@@ -1494,14 +1507,14 @@ GtkWidget * make_gui(struct control * cp) {
 }
 
 /* join any threads and wait for timeouts to exit */
-void join_timeouts(struct control * cp) {
+static void join_timeouts(struct control * cp) {
 	cp->interrupt_threads = 1;
 	while (cp->timeout_tag ||
 	       cp->gui_load_timeout_tag ||
 	       cp->reinit_timeout_tag ||
 	       cp->waitplugin_timeout_tag) {
 		
-		gtk_main_iteration();
+		gtk_main_iteration_do(FALSE);
 	}
 }
 
@@ -1588,6 +1601,15 @@ static void port_event(LV2UI_Handle ui,
 	if (format != 0) {
 		return;
 	}
+
+	if ((port_index < 0) || (port_index >= IR_N_PORTS)) {
+		return;
+	}
+
+	if (!set_port_value(cp, port_index, *pval)) {
+		return;
+	}
+	cp->port_buffer[port_index] = *pval;
 
 	if (!cp->ir->first_conf_done) {
 		port_event_t * pe = (port_event_t *)malloc(sizeof(port_event_t));

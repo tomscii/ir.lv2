@@ -1,24 +1,24 @@
 IR: LV2 Convolution Reverb
 
 Version 1.2.1 and 1.3.1 - 2011.07.10 17:10 CEST
-	Fixed Makefile from David Robillard. The change is that the module now relies on
-	the GNU linker (via -z nodelete) to prevent unloading instead of reliance on the
-	LV2 host obeying lv2:requiredFeature uiext:makeResident.
-	This fixes http://tracker.ardour.org/view.php?id=4112
-	Note: IR 1.2.1 and 1.3.1 are versions with the same fix applied to IR 1.2 and 1.3,
-	respectively. This dual versioning is necessary because 1.2 and 1.3 are in their
-	own right both valid, but incompatible, versions. You have to choose which one
-	you need - please see the plugin webpage for details.
+        Fixed Makefile from David Robillard. The change is that the module now relies on
+        the GNU linker (via -z nodelete) to prevent unloading instead of reliance on the
+        LV2 host obeying lv2:requiredFeature uiext:makeResident.
+        This fixes http://tracker.ardour.org/view.php?id=4112
+        Note: IR 1.2.1 and 1.3.1 are versions with the same fix applied to IR 1.2 and 1.3,
+        respectively. This dual versioning is necessary because 1.2 and 1.3 are in their
+        own right both valid, but incompatible, versions. You have to choose which one
+        you need - please see the plugin webpage for details.
 
 Version 1.3 - 2011.02.04 18:24 CET
-        bugfix release
-        * fix when being run with randomly varying block sizes
-        * fix issues with automation:
-          http://tracker.ardour.org/view.php?id=3214
-        * with very small block sizes zita-convolver doesn't seem to work
-        Due to added buffering, these fixes necessitate processing latency (reported
-        to host via standard LV2 mechanism). Latency is 2^N samples where N >= 10, its
-        actual value depends on the JACK period size.
+	bugfix release
+	* fix when being run with randomly varying block sizes
+	* fix issues with automation:
+	  http://tracker.ardour.org/view.php?id=3214
+	* with very small block sizes zita-convolver doesn't seem to work
+	Due to added buffering, these fixes necessitate processing latency (reported
+	to host via standard LV2 mechanism). Latency is 2^N samples where N >= 10, its
+	actual value depends on the JACK period size.
 
 Version 1.2 - 2011.01.25 17:35 CET
 	bugfix & compatibility enhancements release:

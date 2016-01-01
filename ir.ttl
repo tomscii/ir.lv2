@@ -252,5 +252,15 @@
       lv2:index 24 ;
       lv2:symbol "port_meter_wet_R" ;
       lv2:name "Wet R meter" ;
+    ] ,
+
+########## Latency reporting ##########
+
+    [
+      a lv2:OutputPort, lv2:ControlPort ;
+      lv2:index 25 ;
+      lv2:symbol "port_latency" ;
+      lv2:name "Latency" ;
+      lv2:portProperty lv2:reportsLatency ;
     ]
 .

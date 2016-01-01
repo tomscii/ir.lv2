@@ -29,10 +29,7 @@
 #include <samplerate.h>
 #include <zita-convolver.h>
 
-//#include "uri-map.h"
-
 #define IR_URI                    "http://factorial.hu/plugins/lv2/ir"
-#define IR_PERSIST_KEY_FILENAME   "http://factorial.hu/plugins/lv2/ir/keys/ir_filename"
 
 #define BSIZE       0x4000      /* Blocksize for soundfile data access */
 #define BSIZE_SR    0x1000      /* Blocksize for SRC */
@@ -77,19 +74,25 @@
 #define IR_PORT_METER_WET_L  23
 #define IR_PORT_METER_WET_R  24
 
-typedef struct _ir {
-	/* LV2 extensions */
-	/*
-	LV2_URI_Map_Callback_Data uri_callback_data;
-	uint32_t (*uri_to_id)(LV2_URI_Map_Callback_Data callback_data,
-	                      const char * map, const char * uri);
-	*/
+/* Latency reporting port */
+#define IR_PORT_LATENCY      25
 
+#define IR_N_PORTS           26
+
+#define IR_DEFAULT_JACK_BUFLEN    1024
+#define IR_MAXIMUM_JACK_BUFLEN   16384
+
+typedef struct _ir {
 	/* Audio I/O ports */
 	const float * in_L;
 	const float * in_R;
 	float * out_L;
 	float * out_R;
+
+	unsigned int bufconv_pos;
+	float drybuf_L[IR_MAXIMUM_JACK_BUFLEN];
+	float drybuf_R[IR_MAXIMUM_JACK_BUFLEN];
+	/* convproc's internal buffer acts as the wetbuf */
 
 	/* Control ports */
 	float * port_reverse;
@@ -113,6 +116,7 @@ typedef struct _ir {
 	float * port_meter_dry_R;
 	float * port_meter_wet_L;
 	float * port_meter_wet_R;
+	float * port_latency;
 
 	/* Thread that loads and computes configurations */
 	GThread * conf_thread;
@@ -150,7 +154,7 @@ typedef struct _ir {
 
 	double sample_rate;
 	uint32_t maxsize; /* maximum size of IR supported by Convproc instance */
-	uint32_t block_length; /* defaults to 1024, but may change(?) */
+	uint32_t block_length; /* defaults to IR_DEFAULT_JACK_BUFLEN, but may grow till IR_MAXIMUM_JACK_BUFLEN */
 
 	Convproc * conv_0; /* zita-convolver engine class instances */
 	Convproc * conv_1;
@@ -171,10 +175,6 @@ typedef struct _ir {
 	void (*resample_cleanup)(struct _ir *);
 	void (*prepare_convdata)(struct _ir *);
 	void (*init_conv)(struct _ir *);
-
-	/* IR -> UI cleanup notification function */
-	void (*cleanup_notify)(void * ui_handle);
-	void * ui_handle; /* opaque ref. to a struct control in UI */
 } IR;
 
 #endif /* _IR_H */

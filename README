@@ -7,10 +7,10 @@ Format  : LV2 audio processing plugin
 Homepage: http://factorial.hu/plugins/lv2/ir
 
 
-IR is a zero-latency, realtime, high performance signal convolver
-especially for creating reverb effects. Supports impulse responses
-with 1, 2 or 4 channels, in any soundfile format supported by
-libsndfile.
+IR is a no-latency/low-latency, realtime, high performance signal
+convolver especially for creating reverb effects. Supports impulse
+responses with 1, 2 or 4 channels, in any soundfile format supported
+by libsndfile.
 
 Developed by the author for their own needs, this plugin is released
 to the public in the hope that it will be useful to others, but
@@ -23,9 +23,8 @@ thank you for your understanding.
 Features
 --------
 
-* Zero-latency convolution of impulse responses with stereo audio
+* Realtime convolution of impulse responses with stereo audio
 * Supports Mono, Stereo and 'True Stereo' (4-channel) impulses
-* Realtime operation
 * Very reasonable CPU consumption
 * Maximum impulse length: 1M samples (~22 seconds @ 48kHz)
 * Loads a large number of audio file formats
@@ -56,10 +55,33 @@ host that supports the following extensions:
 
 The only seriously tested host at this time is Ardour 2.8.x (x >= 11);
 Ardour 3 should also work (moderately tested). Other LV2 hosts should
-also work, but YMMV. Compiled and tested on Linux only.
+also work, but YMMV. Compiled and tested on Linux only. Make sure to
+read the Known issues section below.
 
 Please note that due to close coupling between the plugin and its
 GUI, bare-bones use of the plugin (without GUI) is not feasible.
+
+
+Available versions
+------------------
+
+Two versions are available for download.  Version 1.2 is absolutely
+zero-latency, however its run() should only be called with the same
+power-of-two buffer sizes (eg. always 512 samples, or always 2048,
+etc) during the plugin's lifecycle, otherwise bad things happen. In
+practice this means that you should NEVER EVER use this version with
+its parameters automated (even those listed as suitable for
+automation). Otherwise it works as you would expect.
+
+Version 1.3 uses additional internal buffering so automation and the
+seemingly random buffer sizes that occur when automating the plugin
+(calling run() with buffer lengths eg. 1785, 263, 761, 1287 etc.) is
+not an issue anymore. It works with automation (but see the note about
+parameters suitable for automation below), at the expense of
+introducing extra buffering. The resulting latency is reported to the
+host via standard LV2 mechanism. However, if this causes problems for
+you, feel free to use version 1.2 (and keep in mind that BOTH versions
+are completely unsupported by the author).
 
 
 Known issues
@@ -73,8 +95,31 @@ Known issues
   is the first place where a plugin can be certain about its input
   control values).
 
+* Ardour2 version needs to be recent enough (2.8.11 is not enough,
+  the fix is scheduled for Ardour2 2.8.12, at the moment you need a
+  fresh SVN checkout), otherwise you will likely run into this problem
+  with plugin automation: http://tracker.ardour.org/view.php?id=3214
+  (This applies to IR 1.3. You don't want to automate IR 1.2 at all.)
+
 If you would like to build the plugin for debugging, please see the
 Makefile for instructions.
+
+
+Automation
+----------
+
+The following plugin controls are internally smoothed (their effects are
+protected from zipper noise) and thus are suitable for host automation:
+ * Stereo width of input (but not of impulse response!)
+ * Dry gain fader & on/off switch
+ * Wet gain fader & on/off switch
+ * Autogain on/off switch
+
+Changing other controls result in an IR vector recalculation and
+reinitialisation of the convolution engine. Those controls are *not*
+suited for automation. Changes to non-automatable controls are
+blissfully ignored when coming from automation (as opposed to real
+user interaction).
 
 
 Getting impulse responses
@@ -111,21 +156,6 @@ Note: a third file with a name that ends in C is often supplied along
 the L and R files. Most probably this is a regular stereo version of
 the same reverb. You will want to keep this besides the converted
 (4-channel) True Stereo version.
-
-
-Automation
-----------
-
-The following plugin controls are internally smoothed (their effects are
-protected from zipper noise) and thus are suitable for host automation:
- * Stereo width of input (but not of impulse response!)
- * Dry gain fader & on/off switch
- * Wet gain fader & on/off switch
- * Autogain on/off switch
-
-Changing other controls result in an IR vector recalculation and
-reinitialisation of the convolution engine. Those controls are *not*
-suited for automation.
 
 
 Preset handling
