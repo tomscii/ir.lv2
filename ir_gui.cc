@@ -27,8 +27,8 @@
 #include <gtk/gtk.h>
 
 #include <lv2.h>
-#include "lv2_ui.h"
-#include "instance-access.h"
+#include "lv2/lv2plug.in/ns/extensions/ui/ui.h"
+#include "lv2/lv2plug.in/ns/ext/instance-access/instance-access.h"
 
 #include "ir.h"
 #include "ir_utils.h"

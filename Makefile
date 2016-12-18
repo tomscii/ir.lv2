@@ -5,7 +5,7 @@
 # (for local use, not installed by make install)
 
 PREFIX = /usr
-INSTDIR = $(PREFIX)/lib/lv2/ir.lv2
+INSTDIR = $(DESTDIR)$(PREFIX)/lib/lv2/ir.lv2
 
 INST_FILES = ir.so ir_gui.so ir.ttl manifest.ttl
 
@@ -51,7 +51,7 @@ ir_gui.so: ir_gui.o ir_utils.o ir_meter.o ir_modeind.o ir_wavedisplay.o
 	g++ $(LDFLAGS) ir_gui.o ir_utils.o ir_meter.o ir_modeind.o ir_wavedisplay.o $(LIBS) -shared -z nodelete -o ir_gui.so
 
 convert4chan: convert4chan.c
-	gcc $(C4CFLAGS) convert4chan.c $(C4LIBS) -o convert4chan
+	gcc $(C4CFLAGS) $(CPPFLAGS) $(LDFLAGS) convert4chan.c $(C4LIBS) -o convert4chan
 
 install: all
 	mkdir -p $(INSTDIR)
