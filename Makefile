@@ -51,7 +51,7 @@ ir_gui.so: ir_gui.o ir_utils.o ir_meter.o ir_modeind.o ir_wavedisplay.o
 	g++ $(LDFLAGS) ir_gui.o ir_utils.o ir_meter.o ir_modeind.o ir_wavedisplay.o $(LIBS) -shared -z nodelete -o ir_gui.so
 
 convert4chan: convert4chan.c
-	gcc $(C4CFLAGS) $(LDFLAGS) convert4chan.c $(C4LIBS) -o convert4chan
+	gcc $(C4CFLAGS) $(CPPFLAGS) $(LDFLAGS) convert4chan.c $(C4LIBS) -o convert4chan
 
 install: all
 	mkdir -p $(INSTDIR)
