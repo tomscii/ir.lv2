@@ -4,7 +4,7 @@
 # Issue 'make convert4chan' to compile the 4-channel converter utility
 # (for local use, not installed by make install)
 
-PREFIX = /usr
+PREFIX ?= /usr
 INSTDIR = $(DESTDIR)$(PREFIX)/lib/lv2/ir.lv2
 
 INST_FILES = ir.so ir_gui.so ir.ttl manifest.ttl
