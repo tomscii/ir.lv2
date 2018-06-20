@@ -33,8 +33,15 @@
 #include "ir.h"
 #include "ir_utils.h"
 
-#if ZITA_CONVOLVER_MAJOR_VERSION != 3
-#error "This version of IR requires zita-convolver 3.x.x"
+#define ZITA_CONVOLVER_VERSION  0
+#if ZITA_CONVOLVER_MAJOR_VERSION == 3
+#undef ZITA_CONVOLVER_VERSION
+#define ZITA_CONVOLVER_VERSION  3
+#elif ZITA_CONVOLVER_MAJOR_VERSION == 4
+#undef ZITA_CONVOLVER_VERSION
+#define ZITA_CONVOLVER_VERSION  4
+#else
+#error "This version of zita-convolver isn't supported or not found"
 #endif
 
 /* You may need to change these to match your JACK server setup!
@@ -519,6 +526,7 @@ static void init_conv(IR * ir) {
 
 	G_LOCK(conv_configure_lock);
 	//printf("configure length=%d ir->block_length=%d\n", length, ir->block_length);
+#if ZITA_CONVOLVER_VERSION == 3
 	if (ir->nchan == 4) {
 		conv->set_density(1);
 	}
@@ -528,6 +536,19 @@ static void init_conv(IR * ir) {
 				  ir->block_length,
 				  ir->block_length,
 				  Convproc::MAXPART);
+#elif ZITA_CONVOLVER_VERSION == 4
+	float density = 0.0;
+	if (ir->nchan == 4) {
+		density = 1.0;
+	}
+	int ret = conv->configure(2, // n_inputs
+				  2, // n_outputs
+				  length,
+				  ir->block_length,
+				  ir->block_length,
+				  Convproc::MAXPART,
+                  density);
+#endif
 	G_UNLOCK(conv_configure_lock);
 	if (ret != 0) {
 		fprintf(stderr, "IR: can't initialise zita-convolver engine, Convproc::configure returned %d\n", ret);
