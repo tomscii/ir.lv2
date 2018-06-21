@@ -547,7 +547,7 @@ static void init_conv(IR * ir) {
 				  ir->block_length,
 				  ir->block_length,
 				  Convproc::MAXPART,
-                  density);
+				  density);
 #endif
 	G_UNLOCK(conv_configure_lock);
 	if (ret != 0) {
