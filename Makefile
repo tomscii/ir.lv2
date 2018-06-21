@@ -9,9 +9,9 @@ PREFIX ?= /usr
 
 user = $(shell whoami)
 ifeq ($(user),root)
-INSTDIR ?= $(DESTDIR)$(PREFIX)/lib/lv2/$(BUNDLE)
+INSTDIR ?= $(DESTDIR)$(PREFIX)/lib/lv2
 else 
-INSTDIR ?= ~/.lv2/$(BUNDLE)
+INSTDIR ?= ~/.lv2
 endif
 
 INST_FILES = ir.so ir_gui.so ir.ttl manifest.ttl
@@ -61,8 +61,8 @@ convert4chan: convert4chan.c
 	gcc $(C4CFLAGS) $(CPPFLAGS) $(LDFLAGS) convert4chan.c $(C4LIBS) -o convert4chan
 
 install: all
-	mkdir -p $(INSTDIR)
-	cp $(INST_FILES) $(INSTDIR)
+	mkdir -p $(INSTDIR)/$(BUNDLE)
+	cp $(INST_FILES) $(INSTDIR)/$(BUNDLE)
 
 clean:
 	rm -f *~ *.o ir.so ir_gui.so convert4chan

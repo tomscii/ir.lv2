@@ -41,7 +41,7 @@
 #undef ZITA_CONVOLVER_VERSION
 #define ZITA_CONVOLVER_VERSION  4
 #else
-#error "This version of zita-convolver isn't supported or not found"
+#error "This version of IR requires zita-convolver 3.x.x or 4.x.x"
 #endif
 
 /* You may need to change these to match your JACK server setup!
@@ -519,6 +519,7 @@ void init_conv(IR * ir) {
 	}
 
 	G_LOCK(conv_configure_lock);
+	//printf("configure length=%d ir->block_length=%d\n", length, ir->block_length);
 #if ZITA_CONVOLVER_VERSION == 3
 	if (ir->nchan == 4) {
 		conv->set_density(1);
@@ -530,9 +531,9 @@ void init_conv(IR * ir) {
 				  ir->block_length,
 				  Convproc::MAXPART);
 #elif ZITA_CONVOLVER_VERSION == 4
-	float density = 0.0;
+	float density = 0.0f;
 	if (ir->nchan == 4) {
-		density = 1.0;
+		density = 1.0f;
 	}
 	int ret = conv->configure(2, // n_inputs
 				  2, // n_outputs
