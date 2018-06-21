@@ -91,7 +91,8 @@ Furthermore, there is a split of versions based on zita-convolver library
 compatibility. The last versions to compile against and work with
 zita-convolver 2 are 1.2.1 and 1.3.1. Later versions in both lines
 (starting with 1.2.2 and 1.3.2) are compatible with zita-convolver 3.x.x
-only.
+only. Versions starting with 1.2.4 and 1.3.4 are compatible with
+zita-convolver 3.x.x as well as 4.x.x.
 
 Note that versions in the `automatable` branch are not superior to the
 corresponding `zero-latency` version; they are just different. HINT:
@@ -236,6 +237,8 @@ from: <http://kokkinizita.linuxaudio.org/linuxaudio/downloads/index.html>
 Please note that zita-convolver-2.0.0 is required for IR versions up to
 1.2.1 and 1.3.1; IR 1.2.2 / 1.3.2 and later versions require the newer
 zita-convolver-3.x.x library (these are incompatible library versions).
+Versions starting with 1.2.4 and 1.3.4 are compatible with zita-convolver
+3.x.x as well as 4.x.x.
 
 The libsndfile and libsamplerate libraries are written by Erik de
 Castro Lopo and are widely used throughout the Linux Audio
