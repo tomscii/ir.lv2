@@ -668,7 +668,8 @@ static LV2_Handle instantiateIR(const LV2_Descriptor *descriptor,
 	ir->keyfile = keyfile;
 	ir->store_bookmarks = store_bookmarks;
 
-	ir->conf_thread = g_thread_create(IR_configurator_thread, (gpointer)ir, TRUE, NULL);
+	ir->conf_thread = g_thread_new("IR_configurator_thread",
+                                       IR_configurator_thread, (gpointer)ir);
 	return (LV2_Handle)ir;
 }
 
@@ -846,15 +847,10 @@ void __attribute__ ((constructor)) init() {
 		return;
 	}
 
-	g_type_init();
 	if (!g_thread_supported()) {
-		printf("IR: initializing GThread.\n");
-		g_thread_init(NULL);
-		if (!g_thread_supported()) {
-			fprintf(stderr, "IR: error initialising GThread. This plugin requires a working GLib with GThread.\n");
-			IR_Descriptor = NULL;
-			return;
-		}
+		fprintf(stderr, "IR: This plugin requires a working GLib with GThread.\n");
+		IR_Descriptor = NULL;
+		return;
 	}
 
 	IR_Descriptor = (LV2_Descriptor *)malloc(sizeof(LV2_Descriptor));

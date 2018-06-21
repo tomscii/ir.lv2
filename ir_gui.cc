@@ -476,7 +476,7 @@ static void gui_load_sndfile(struct control * cp, char * filename) {
 				   0 /* default format */, &value2);
 
 		cp->ir->reinit_running = 1;
-		cp->gui_load_thread = g_thread_create(gui_load_thread, cp, TRUE, NULL);
+		cp->gui_load_thread = g_thread_new("gui_load_thread", gui_load_thread, cp);
 		cp->gui_load_timeout_tag = g_timeout_add(100, gui_load_timeout_callback, cp);
 	}
 }
@@ -1256,7 +1256,7 @@ static gint timeout_callback(gpointer data) {
 		}
 		ir_wavedisplay_set_message(IR_WAVEDISPLAY(cp->wave_display), "Calculating...");
 		cp->ir->reinit_running = 1;
-		cp->reinit_thread = g_thread_create(reinit_thread, cp, TRUE, NULL);
+		cp->reinit_thread = g_thread_new("reinit_thread", reinit_thread, cp);
 		cp->reinit_timeout_tag = g_timeout_add(100, reinit_timeout_callback, cp);
 		cp->ir->run = 0;
 	}
