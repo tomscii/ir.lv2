@@ -16,6 +16,9 @@ endif
 
 INST_FILES = ir.so ir_gui.so ir.ttl manifest.ttl
 
+CC ?= gcc
+CXX ?= g++
+
 # change "-O2 -ffast-math" to "-g -O0" below if you want to debug the plugin
 CPPFLAGS += -Wall -I. -I/usr/include `pkg-config --cflags gtk+-2.0` `pkg-config --cflags gthread-2.0` -D__STDC_FORMAT_MACROS -O2 -ffast-math
 LIBS += -lc -lm -lzita-convolver -lsamplerate -lsndfile `pkg-config --libs gthread-2.0` `pkg-config --libs gtk+-2.0`
@@ -34,31 +37,31 @@ C4LIBS = -lsndfile `pkg-config --libs gthread-2.0`
 all: ir.so ir_gui.so
 
 ir.o: ir.cc ir.h ir_utils.h
-	g++ ir.cc $(CPPFLAGS) -c -fPIC -o ir.o
+	$(CXX) ir.cc $(CPPFLAGS) -c -fPIC -o ir.o
 
 ir_gui.o: ir_gui.cc ir.h ir_utils.h ir_wavedisplay.h
-	g++ ir_gui.cc $(CPPFLAGS) -c -fPIC -o ir_gui.o
+	$(CXX) ir_gui.cc $(CPPFLAGS) -c -fPIC -o ir_gui.o
 
 ir_utils.o: ir_utils.cc ir_utils.h ir.h
-	g++ ir_utils.cc $(CPPFLAGS) -c -fPIC -o ir_utils.o
+	$(CXX) ir_utils.cc $(CPPFLAGS) -c -fPIC -o ir_utils.o
 
 ir_meter.o: ir_meter.cc ir_meter.h ir.h ir_utils.h
-	g++ ir_meter.cc $(CPPFLAGS) -c -fPIC -o ir_meter.o
+	$(CXX) ir_meter.cc $(CPPFLAGS) -c -fPIC -o ir_meter.o
 
 ir_modeind.o: ir_modeind.cc ir_modeind.h ir.h ir_utils.h
-	g++ ir_modeind.cc $(CPPFLAGS) -c -fPIC -o ir_modeind.o
+	$(CXX) ir_modeind.cc $(CPPFLAGS) -c -fPIC -o ir_modeind.o
 
 ir_wavedisplay.o: ir_wavedisplay.cc ir_wavedisplay.h ir.h ir_utils.h
-	g++ ir_wavedisplay.cc $(CPPFLAGS) -c -fPIC -o ir_wavedisplay.o
+	$(CXX) ir_wavedisplay.cc $(CPPFLAGS) -c -fPIC -o ir_wavedisplay.o
 
 ir.so: ir.o ir_utils.o
-	g++ $(LDFLAGS) ir.o ir_utils.o $(LIBS) -shared -o ir.so
+	$(CXX) $(LDFLAGS) ir.o ir_utils.o $(LIBS) -shared -o ir.so
 
 ir_gui.so: ir_gui.o ir_utils.o ir_meter.o ir_modeind.o ir_wavedisplay.o
-	g++ $(LDFLAGS) ir_gui.o ir_utils.o ir_meter.o ir_modeind.o ir_wavedisplay.o $(LIBS) -shared -z nodelete -o ir_gui.so
+	$(CXX) $(LDFLAGS) ir_gui.o ir_utils.o ir_meter.o ir_modeind.o ir_wavedisplay.o $(LIBS) -shared -z nodelete -o ir_gui.so
 
 convert4chan: convert4chan.c
-	gcc $(C4CFLAGS) $(CPPFLAGS) $(LDFLAGS) convert4chan.c $(C4LIBS) -o convert4chan
+	$(CC) $(C4CFLAGS) $(CPPFLAGS) $(LDFLAGS) convert4chan.c $(C4LIBS) -o convert4chan
 
 install: all
 	mkdir -p $(INSTDIR)/$(BUNDLE)
