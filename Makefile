@@ -4,7 +4,6 @@
 # Issue 'make convert4chan' to compile the 4-channel converter utility
 # (for local use, not installed by make install)
 
-
 BUNDLE = ir.lv2
 PREFIX ?= /usr
 
