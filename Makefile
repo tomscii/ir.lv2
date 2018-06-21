@@ -10,9 +10,9 @@ PREFIX ?= /usr
 
 user = $(shell whoami)
 ifeq ($(user),root)
-INSTDIR = $(DESTDIR)$(PREFIX)/lib/lv2/$(BUNDLE)
+INSTDIR ?= $(DESTDIR)$(PREFIX)/lib/lv2/$(BUNDLE)
 else 
-INSTDIR = ~/.lv2/$(BUNDLE)
+INSTDIR ?= ~/.lv2/$(BUNDLE)
 endif
 
 INST_FILES = ir.so ir_gui.so ir.ttl manifest.ttl
@@ -69,4 +69,4 @@ clean:
 	rm -f *~ *.o ir.so ir_gui.so convert4chan
 
 uninstall :
-	rm -rf $(INSTDIR)/$(BUNDLE)
+	rm -rf $(INSTDIR)
