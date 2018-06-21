@@ -16,6 +16,9 @@ endif
 
 INST_FILES = ir.so ir_gui.so ir.ttl manifest.ttl
 
+CC ?= gcc
+CXX ?= g++
+
 # change "-O2 -ffast-math" to "-g -O0" below if you want to debug the plugin
 CPPFLAGS += -Wall -I. -I/usr/include `pkg-config --cflags gtk+-2.0` `pkg-config --cflags gthread-2.0` -D__STDC_FORMAT_MACROS -O2 -ffast-math
 LIBS += -lc -lm -lzita-convolver -lsamplerate -lsndfile `pkg-config --libs gthread-2.0` `pkg-config --libs gtk+-2.0`
