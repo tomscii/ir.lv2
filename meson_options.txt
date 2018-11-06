@@ -1,0 +1,7 @@
+option('bundle',
+       type: 'string', value: 'ir.lv2',
+       description: 'Name for the LV2 bundle')
+
+option('utils',
+       type: 'boolean', value: false,
+       description: 'Wheter or not to build utility tools')
