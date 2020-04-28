@@ -238,7 +238,7 @@ typedef void (*LV2UI_Write_Function)(LV2UI_Controller controller,
 /** This struct contains the implementation of an UI. A pointer to an 
     object of this type is returned by the lv2ui_descriptor() function. 
 */
-typedef struct _LV2UI_Descriptor {
+typedef struct LV2UI_Descriptor {
   
   /** The URI for this UI (not for the plugin it controls). */
   const char* URI;
@@ -268,7 +268,7 @@ typedef struct _LV2UI_Descriptor {
 			same array as the one the plugin host passes to a 
 			plugin.
   */
-  LV2UI_Handle (*instantiate)(const struct _LV2UI_Descriptor* descriptor,
+  LV2UI_Handle (*instantiate)(const struct LV2UI_Descriptor* descriptor,
                               const char*                     plugin_uri,
                               const char*                     bundle_path,
                               LV2UI_Write_Function            write_function,
