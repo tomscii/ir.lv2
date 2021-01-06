@@ -1510,7 +1510,7 @@ static void cleanup(LV2UI_Handle ui) {
 	free(cp);
 }
 
-static LV2UI_Handle instantiate(const struct _LV2UI_Descriptor * descriptor,
+static LV2UI_Handle instantiate(const struct LV2UI_Descriptor * descriptor,
 				const char * plugin_uri,
 				const char * bundle_path,
 				LV2UI_Write_Function write_function,
